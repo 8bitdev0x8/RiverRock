@@ -136,8 +136,9 @@
     :root[data-theme="dark"] .leaflet-tile-pane { filter:brightness(.78) invert(1) hue-rotate(180deg) saturate(.72) contrast(.9); }
     :root[data-theme="dark"] .leaflet-control-zoom a { background:#19231f !important; border-color:#34443e !important; color:#8edbb8 !important; }
     .map-pin { width:28px; height:28px; display:grid; place-items:center; border-radius:9px; background:var(--green-soft); color:var(--green); font-size:14px; }
-    .map-top strong { display:block; font-size:11px; line-height:1.2; }
-    .map-top span { display:block; margin-top:3px; color:var(--muted); font-size:9px; }
+    .map-top-copy { min-width:0; display:flex; flex-direction:column; gap:3px; }
+    .map-top-copy strong { display:block; font-size:11px; line-height:1.2; }
+    .map-top-copy small { display:block; color:var(--muted); font-size:9px; line-height:1.35; }
     .map-key { position:absolute; z-index:450; left:14px; bottom:14px; width:220px; padding:12px 13px; border:1px solid rgba(222,232,224,.95); border-radius:12px; background:rgba(255,255,255,.94); box-shadow:0 5px 20px rgba(24,47,37,.08); backdrop-filter:blur(8px); }
     .map-key-title { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; font-size:10px; font-weight:730; }
     .map-key-title small { color:var(--muted); font-size:9px; font-weight:500; }
@@ -233,7 +234,7 @@
       <div class="workspace-grid">
       <div class="map-wrap">
         <div id="map" role="region" aria-label="Interactive OpenStreetMap service request heatmap"></div>
-        <div class="map-top"><span class="map-pin" aria-hidden="true">⌖</span><span><strong>Explore your area</strong><span>Pan and zoom, or load a dataset</span></span></div>
+        <div class="map-top"><span class="map-pin" aria-hidden="true">⌖</span><div class="map-top-copy"><strong>Explore your area</strong><small>Pan and zoom, or load a dataset</small></div></div>
         <div class="map-key"><div class="map-key-title"><span>Complaint concentration</span><small id="map-count">No data loaded</small></div><div class="legend"><span>Low</span><span class="gradient"></span><span>High</span></div></div>
       </div>
       <section class="trend-panel" aria-labelledby="trend-heading">
