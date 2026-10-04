@@ -58,7 +58,7 @@
     .file-name { min-width:0; overflow:hidden; color:var(--muted); font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
     .text-button { padding:3px 0; border:0; background:transparent; color:var(--green); font-size:10px; font-weight:680; cursor:pointer; }
     .text-button:disabled { display:none; }
-    .format { margin-top:9px; padding:8px 9px; overflow:auto; border:1px solid #e7ede8; border-radius:9px; background:#f6f8f6; color:#5c7169; font:10px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; white-space:nowrap; }
+    .format { margin-top:9px; padding:8px 9px; border:1px solid #e7ede8; border-radius:9px; background:#f6f8f6; color:#5c7169; font:10px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap:anywhere; }
     .error { display:none; margin-top:9px; padding:8px 9px; border:1px solid #f0caca; border-radius:9px; background:#fff7f6; color:#9f3535; font-size:11px; }
     .error.visible { display:block; }
     .control-label { display:flex; justify-content:space-between; align-items:center; gap:8px; margin:0 0 7px; color:#445852; font-size:11px; font-weight:680; }
@@ -107,7 +107,8 @@
     .map-key-title small { color:var(--muted); font-size:9px; font-weight:500; }
     .leaflet-control-attribution { font-size:9px !important; }
     .leaflet-control-zoom a { color:var(--green-dark) !important; }
-    @media (max-width: 900px) { .shell { grid-template-columns:320px minmax(0,1fr); } aside { padding-left:19px; padding-right:19px; } }
+    @media (max-width: 1100px) and (min-width: 701px) { .shell { grid-template-columns:320px minmax(0,1fr); } aside { padding-left:19px; padding-right:19px; } main { overflow:auto; } .workspace-grid { height:auto; min-height:100%; grid-template-columns:1fr; grid-template-rows:minmax(500px,65vh) auto; } }
+    @media (max-width: 900px) { aside { padding-left:19px; padding-right:19px; } }
     @media (max-width: 700px) {
       html, body { height:auto; min-height:100%; }
       .shell { height:auto; min-height:100vh; display:flex; flex-direction:column; }
@@ -126,7 +127,6 @@
       .map-key { left:10px; bottom:10px; width:195px; }
     }
     @media (max-width: 420px) { .privacy-pill { max-width:132px; white-space:normal; line-height:1.2; } .brand-subtitle { font-size:10px; } }
-    @media (min-width:701px) and (max-width:1100px) { .shell { grid-template-columns:320px minmax(0,1fr); } .workspace-grid { grid-template-columns:minmax(0,1fr) 235px; } }
   </style>
 </head>
 <body>
