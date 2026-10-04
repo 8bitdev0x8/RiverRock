@@ -3,12 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f3f6f4">
+  <meta name="theme-color" content="#f3f6f4" id="theme-color">
   <meta name="description" content="Explore community service request patterns on an interactive OpenStreetMap heatmap.">
   <title>Service Requests | Neighbourhood Signals</title>
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="preconnect" href="https://tile.openstreetmap.org">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script>
+    try { const savedTheme = localStorage.getItem('neighbourhood-signals-theme'); if (savedTheme === 'dark') document.documentElement.dataset.theme = 'dark'; } catch (_) {}
+  </script>
   <style>
     :root {
       color-scheme: light;
@@ -24,6 +27,16 @@
       --coral: #ea794e;
       --red: #b9364a;
       --shadow: 0 16px 48px rgba(23, 49, 39, .08);
+      --chart-grid: #e7ede8;
+      --chart-line: #176653;
+      --chart-dot: #fff;
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --ink: #e8f0ec; --muted: #a5b5ad; --line: #34443e; --paper: #19231f; --canvas: #101714;
+      --green: #78c9a7; --green-dark: #8edbb8; --green-soft: #263d33; --gold: #e4bd54;
+      --coral: #e9815b; --red: #d45b67; --shadow: 0 16px 48px rgba(0,0,0,.24);
+      --chart-grid: #34443e; --chart-line: #78c9a7; --chart-dot: #19231f;
     }
     * { box-sizing: border-box; }
     html, body { height: 100%; }
@@ -31,11 +44,16 @@
     button, input, select { font: inherit; }
     .shell { height: 100vh; min-height: 620px; display: grid; grid-template-columns: 354px minmax(0, 1fr); grid-template-rows: 72px minmax(0, 1fr); }
     header { grid-column: 1 / -1; display:flex; align-items:center; justify-content:space-between; padding:0 26px; background:var(--paper); border-bottom:1px solid var(--line); z-index:500; }
+    .header-actions { display:flex; align-items:center; gap:10px; }
+    .theme-toggle { display:inline-flex; align-items:center; gap:7px; padding:7px 11px; border:1px solid var(--line); border-radius:99px; background:var(--paper); color:var(--ink); font-size:11px; font-weight:650; cursor:pointer; }
+    .theme-toggle:hover { border-color:var(--green); }
+    .theme-toggle:focus-visible { outline:3px solid rgba(23,102,83,.25); outline-offset:2px; }
     .brand { display:flex; align-items:center; gap:12px; min-width:0; }
     .brand-mark { width:38px; height:38px; display:grid; place-items:center; border-radius:12px; background:var(--green); color:white; font-size:20px; box-shadow:0 5px 14px rgba(23,102,83,.2); }
     .brand-title { margin:0; font-size:15px; line-height:1.25; letter-spacing:-.02em; font-weight:760; }
     .brand-subtitle { margin:2px 0 0; color:var(--muted); font-size:11px; }
     .privacy-pill { display:flex; align-items:center; gap:7px; padding:7px 10px; border:1px solid #dce9df; border-radius:99px; background:#f7fbf7; color:#3e6255; font-size:11px; font-weight:650; white-space:nowrap; }
+    :root[data-theme="dark"] .privacy-pill { border-color:#355849; background:#20382e; color:#b6e1ca; }
     .privacy-dot { width:7px; height:7px; border-radius:50%; background:#39a278; }
     aside { overflow:auto; padding:25px 22px 22px; background:var(--paper); border-right:1px solid var(--line); }
     .eyebrow { margin:0 0 9px; color:var(--green); font-size:10px; line-height:1.2; font-weight:780; letter-spacing:.13em; text-transform:uppercase; }
@@ -47,6 +65,8 @@
     .section-hint { color:#84938d; font-size:10px; }
     .upload { display:block; border:1px dashed #a9c7b8; border-radius:13px; padding:14px; background:#f7fbf8; color:var(--ink); cursor:pointer; transition:background .16s ease,border-color .16s ease,transform .16s ease; }
     .upload:hover, .upload:focus-within { border-color:var(--green); background:#eef7f1; }
+    :root[data-theme="dark"] .upload { border-color:#49695a; background:#1c2d25; }
+    :root[data-theme="dark"] .upload:hover, :root[data-theme="dark"] .upload:focus-within { background:#243b30; }
     .upload:active { transform:scale(.995); }
     .upload-row { display:flex; align-items:center; gap:11px; }
     .upload-icon { flex:0 0 34px; width:34px; height:34px; display:grid; place-items:center; border-radius:10px; background:var(--green-soft); color:var(--green); font-size:19px; }
@@ -59,27 +79,35 @@
     .text-button { padding:3px 0; border:0; background:transparent; color:var(--green); font-size:10px; font-weight:680; cursor:pointer; }
     .text-button:disabled { display:none; }
     .format { margin-top:9px; padding:8px 9px; border:1px solid #e7ede8; border-radius:9px; background:#f6f8f6; color:#5c7169; font:10px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap:anywhere; }
+    :root[data-theme="dark"] .format { border-color:var(--line); background:#202b27; color:var(--muted); }
     .error { display:none; margin-top:9px; padding:8px 9px; border:1px solid #f0caca; border-radius:9px; background:#fff7f6; color:#9f3535; font-size:11px; }
     .error.visible { display:block; }
+    :root[data-theme="dark"] .error { border-color:#70444a; background:#352326; color:#ffb5b5; }
     .control-label { display:flex; justify-content:space-between; align-items:center; gap:8px; margin:0 0 7px; color:#445852; font-size:11px; font-weight:680; }
     .control-label output { color:var(--green); font-variant-numeric:tabular-nums; }
     select { width:100%; min-height:40px; padding:9px 35px 9px 11px; border:1px solid var(--line); border-radius:10px; appearance:none; background:#fff; color:var(--ink); font-size:12px; outline:none; }
+    :root[data-theme="dark"] select { background:#202b27; }
     select:focus { border-color:#6da48d; box-shadow:0 0 0 3px rgba(23,102,83,.12); }
     select:disabled { background:#f6f8f6; color:#85938d; cursor:not-allowed; }
+    :root[data-theme="dark"] select:disabled { background:#1b2521; color:#7f9188; }
     .select-wrap { position:relative; }
     .select-wrap:after { content:""; position:absolute; right:14px; top:16px; width:7px; height:7px; border-right:1.5px solid #6b7c75; border-bottom:1.5px solid #6b7c75; transform:rotate(45deg); pointer-events:none; }
+    :root[data-theme="dark"] .select-wrap:after { border-color:#b4c3bb; }
     .slider { width:100%; margin:2px 0 18px; accent-color:var(--green); cursor:pointer; }
     .slider:disabled { opacity:.45; cursor:not-allowed; }
     .stats { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
     .stat { min-width:0; padding:12px; border:1px solid #e7ede8; border-radius:12px; background:#f8faf8; }
+    :root[data-theme="dark"] .stat { border-color:var(--line); background:#202b27; }
     .stat strong { display:block; overflow:hidden; font-size:22px; line-height:1.1; letter-spacing:-.045em; font-weight:760; font-variant-numeric:tabular-nums; text-overflow:ellipsis; }
     .stat span { display:block; margin-top:5px; color:var(--muted); font-size:10px; }
     .status-summary { display:flex; align-items:center; gap:7px; min-height:20px; margin-top:10px; color:var(--muted); font-size:10px; }
     .status-chip { display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border:1px solid #dcebe0; border-radius:99px; background:#f1f8f3; color:#28644f; font-size:10px; font-weight:700; }
+    :root[data-theme="dark"] .status-chip { border-color:#355849; background:#20382e; color:#b6e1ca; }
     .status-chip:before { content:""; width:6px; height:6px; border-radius:50%; background:#49a879; }
     .legend { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:10px; }
     .gradient { height:8px; flex:1; border-radius:99px; background:linear-gradient(90deg,#56b789 0%,var(--gold) 48%,var(--coral) 75%,var(--red) 100%); }
     .privacy-note { margin-top:19px; padding:11px 12px; border:1px solid #e3ebe5; border-radius:11px; background:#f7faf7; color:#61726c; font-size:10px; line-height:1.55; }
+    :root[data-theme="dark"] .privacy-note { border-color:var(--line); background:#202b27; }
     .privacy-note strong { color:#355a4b; }
     main { min-width:0; min-height:0; padding:14px; }
     .workspace-grid { width:100%; height:100%; display:grid; grid-template-columns:minmax(0,1fr) 280px; gap:12px; min-height:0; }
@@ -89,16 +117,22 @@
     .trend-subtitle { margin:4px 0 15px; color:var(--muted); font-size:10px; }
     .trend-chart { width:100%; height:150px; overflow:visible; }
     .trend-chart text { fill:#73847d; font:9px ui-sans-serif,system-ui,sans-serif; }
+    :root[data-theme="dark"] .trend-chart text { fill:#a5b5ad; }
     .trend-note { margin-top:8px; color:#71817b; font-size:10px; line-height:1.5; }
     .report-list { margin-top:18px; padding-top:15px; border-top:1px solid var(--line); }
     .report-list h3 { margin:0 0 10px; font-size:11px; }
     .report-card { padding:10px 0; border-top:1px solid #edf1ee; }
     .report-card:first-of-type { border-top:0; }
+    .report-card { border-color:#edf1ee; }
+    :root[data-theme="dark"] .report-card { border-color:var(--line); }
     .report-issue { margin:0 0 5px; font-size:11px; font-weight:740; }
     .report-meta { color:var(--muted); font-size:9px; line-height:1.6; }
     .empty-list { color:var(--muted); font-size:10px; }
     #map { width:100%; height:100%; }
     .map-top { position:absolute; z-index:450; top:14px; left:14px; display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid rgba(222,232,224,.95); border-radius:12px; background:rgba(255,255,255,.94); box-shadow:0 5px 20px rgba(24,47,37,.08); backdrop-filter:blur(8px); }
+    :root[data-theme="dark"] .map-top, :root[data-theme="dark"] .map-key { border-color:#3e5148; background:rgba(25,35,31,.94); }
+    :root[data-theme="dark"] .leaflet-tile-pane { filter:brightness(.78) invert(1) hue-rotate(180deg) saturate(.72) contrast(.9); }
+    :root[data-theme="dark"] .leaflet-control-zoom a { background:#19231f !important; border-color:#34443e !important; color:#8edbb8 !important; }
     .map-pin { width:28px; height:28px; display:grid; place-items:center; border-radius:9px; background:var(--green-soft); color:var(--green); font-size:14px; }
     .map-top strong { display:block; font-size:11px; line-height:1.2; }
     .map-top span { display:block; margin-top:3px; color:var(--muted); font-size:9px; }
@@ -136,7 +170,7 @@
         <div class="brand-mark" aria-hidden="true">⌖</div>
         <div><p class="brand-title">Neighbourhood Signals</p><p class="brand-subtitle">Community service request heatmap</p></div>
       </div>
-      <div class="privacy-pill"><span class="privacy-dot" aria-hidden="true"></span> CSV stays in this browser</div>
+      <div class="header-actions"><button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="false"><span aria-hidden="true">◐</span><span id="theme-label">Dark mode</span></button></div>
     </header>
     <aside aria-label="Map controls">
       <div class="intro">
@@ -235,37 +269,63 @@
     const fileName = document.querySelector('#file-name');
     const errorBox = document.querySelector('#csv-error');
     const clearButton = document.querySelector('#clear-data');
+    const themeToggle = document.querySelector('#theme-toggle');
+    let csvWorkerUrl = '';
+
+    function applyTheme(theme) {
+      const dark = theme === 'dark';
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      document.querySelector('#theme-label').textContent = dark ? 'Light mode' : 'Dark mode';
+      themeToggle.setAttribute('aria-pressed', String(dark));
+      document.querySelector('#theme-color').content = dark ? '#101714' : '#f3f6f4';
+    }
+    applyTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
+    themeToggle.addEventListener('click', () => {
+      const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+      try { localStorage.setItem('neighbourhood-signals-theme', next); } catch (_) {}
+      scheduleRender();
+      requestAnimationFrame(() => map.invalidateSize());
+    });
+
+    const csvWorkerSource = `
+      function parseCsv(text) {
+        const rows=[]; let row=[],cell='',quoted=false;
+        for(let i=0;i<text.length;i++) { const ch=text[i];
+          if(ch==='"'&&quoted&&text[i+1]==='"'){cell+='"';i++;}
+          else if(ch==='"') quoted=!quoted;
+          else if(ch===','&&!quoted){row.push(cell);cell='';}
+          else if((ch==='\\n'||ch==='\\r')&&!quoted){if(ch==='\\r'&&text[i+1]==='\\n')i++;row.push(cell);if(row.some(v=>v.trim()))rows.push(row);row=[];cell='';}
+          else cell+=ch;
+        }
+        row.push(cell);if(row.some(v=>v.trim()))rows.push(row);return rows;
+      }
+      function parseDate(value){const text=(value||'').trim();if(!text)return null;const m=text.match(/^(\\d{1,2})[/.-](\\d{1,2})[/.-](\\d{4})$/);if(m){const d=new Date(+m[3],+m[2]-1,+m[1]);return Number.isNaN(+d)?null:d;}const d=new Date(text);return Number.isNaN(+d)?null:d;}
+      function index(headers, aliases){return headers.findIndex(value=>aliases.includes(value));}
+      self.onmessage=async event=>{try{
+        const rows=parseCsv(await event.data.text());if(rows.length<2)throw new Error('This CSV has no data rows.');
+        const headers=rows.shift().map(value=>value.trim().toLowerCase().replace(/^\\ufeff/,''));
+        const lat=index(headers,['latitude','lat','y']),lon=index(headers,['longitude','lon','lng','long','x']);
+        const status=index(headers,['status','incident_status','request_status']),issue=index(headers,['issue','issue_type','problem','name','service_request_type']);
+        const category=index(headers,['category','group_name','service_group']),date=index(headers,['reported','reported_date','incident_date','created_at','date','request_date']);
+        const location=index(headers,['location','area','neighbourhood','neighborhood','postcode','electoral_area','incident_address','address']);
+        if(lat<0||lon<0)throw new Error('Add coordinate columns named lat/lon or latitude/longitude.');
+        const records=[];
+        for(const row of rows){const a=Number(row[lat]),b=Number(row[lon]);if(Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a)<=90&&Math.abs(b)<=180)records.push({lat:a,lon:b,status:status>=0?(row[status]||'').trim():'',issue:issue>=0?(row[issue]||'').trim():'',category:category>=0?(row[category]||'').trim():'',location:location>=0?(row[location]||'').trim():'',date:date>=0?parseDate(row[date]):null});}
+        if(!records.length)throw new Error('No rows with valid coordinates were found.');
+        self.postMessage({records});
+      }catch(error){self.postMessage({error:error&&error.message?error.message:'We could not read this CSV.'});}};
+    `;
 
     function showError(message) {
       errorBox.textContent = message;
       errorBox.classList.toggle('visible', Boolean(message));
     }
 
-    function firstIndex(headers, aliases) { return headers.findIndex(value => aliases.includes(value)); }
-    function uniqueValues(key) { return Array.from(new Set(records.map(record => record[key]).filter(Boolean))).sort((a,b) => a.localeCompare(b)); }
     function fillSelect(select, label, values) {
       select.replaceChildren(new Option(label, 'all'));
       values.forEach(value => select.add(new Option(value, value)));
       select.disabled = values.length === 0;
-    }
-    function parseDate(value) {
-      const text = (value || '').trim();
-      if (!text) return null;
-      let match = text.match(/^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4})$/);
-      if (match) { const d = new Date(+match[3], +match[2]-1, +match[1]); return Number.isNaN(+d) ? null : d; }
-      const date = new Date(text);
-      return Number.isNaN(+date) ? null : date;
-    }
-    function filteredRecords() {
-      const cutoffDays = timeFilter.value === 'all' ? null : Number(timeFilter.value);
-      const cutoff = cutoffDays ? new Date(Date.now() - cutoffDays * 86400000) : null;
-      return records.filter(record =>
-        (issueFilter.value === 'all' || record.issue === issueFilter.value) &&
-        (categoryFilter.value === 'all' || record.category === categoryFilter.value) &&
-        (locationFilter.value === 'all' || record.location === locationFilter.value) &&
-        (statusFilter.value === 'all' || record.status === statusFilter.value) &&
-        (!cutoff || (record.date && record.date >= cutoff))
-      );
     }
     function renderTrend(visible) {
       const svg = document.querySelector('#trend-chart');
@@ -282,54 +342,45 @@
       const max = Math.max(1,...points.map(p=>p[1])), x0=30, x1=250, y0=12, y1=116;
       const ns='http://www.w3.org/2000/svg';
       const make=(tag,attrs)=>{const e=document.createElementNS(ns,tag);Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v));svg.appendChild(e);return e;};
-      [0,.5,1].forEach(frac=>{const y=y1-frac*(y1-y0);make('line',{x1:x0,y1:y,x2:x1,y2:y,stroke:'#e7ede8','stroke-width':1});});
+      const themeStyles=getComputedStyle(document.documentElement);
+      [0,.5,1].forEach(frac=>{const y=y1-frac*(y1-y0);make('line',{x1:x0,y1:y,x2:x1,y2:y,stroke:themeStyles.getPropertyValue('--chart-grid').trim(),'stroke-width':1});});
       const coords=points.map((p,i)=>[points.length===1?(x0+x1)/2:x0+i*(x1-x0)/(points.length-1),y1-(p[1]/max)*(y1-y0)]);
-      if(coords.length>1) make('polyline',{points:coords.map(p=>p.join(',')).join(' '),fill:'none',stroke:'#176653','stroke-width':2.5,'stroke-linecap':'round','stroke-linejoin':'round'});
-      coords.forEach((p,i)=>{make('circle',{cx:p[0],cy:p[1],r:3.5,fill:'#fff',stroke:'#176653','stroke-width':2});const t=make('text',{x:p[0],y:137,'text-anchor':'middle'});t.textContent=points[i][0].slice(2).replace('-','/');});
+      const chartLine=themeStyles.getPropertyValue('--chart-line').trim(), chartDot=themeStyles.getPropertyValue('--chart-dot').trim();
+      if(coords.length>1) make('polyline',{points:coords.map(p=>p.join(',')).join(' '),fill:'none',stroke:chartLine,'stroke-width':2.5,'stroke-linecap':'round','stroke-linejoin':'round'});
+      coords.forEach((p,i)=>{make('circle',{cx:p[0],cy:p[1],r:3.5,fill:chartDot,stroke:chartLine,'stroke-width':2});const t=make('text',{x:p[0],y:137,'text-anchor':'middle'});t.textContent=points[i][0].slice(2).replace('-','/');});
       document.querySelector('#trend-note').textContent = `${dated.length.toLocaleString()} dated reports across ${points.length} month${points.length===1?'':'s'}; chart updates with filters.`;
     }
     function renderReports(visible) {
       const host=document.querySelector('#report-list');
       if(!visible.length){host.className='empty-list';host.textContent='No reports match these filters.';return;}
       host.className='';
-      const sorted=visible.slice().sort((a,b)=>(b.date?.getTime()||0)-(a.date?.getTime()||0)).slice(0,8);
+      const sorted=[];
+      for(const record of visible){const time=record.date?.getTime()||0;let i=0;while(i<sorted.length&&(sorted[i].date?.getTime()||0)>=time)i++;sorted.splice(i,0,record);if(sorted.length>8)sorted.pop();}
       host.replaceChildren(...sorted.map(r=>{const card=document.createElement('article');card.className='report-card';const issue=document.createElement('p');issue.className='report-issue';issue.textContent=r.issue||'Service request';const meta=document.createElement('div');meta.className='report-meta';meta.textContent=`Reported: ${r.date ? r.date.toLocaleDateString('en-IE',{day:'numeric',month:'short',year:'numeric'}) : 'Date unavailable'} · Location: ${r.location||'Unspecified'} · Category: ${r.category||'Unspecified'} · Status: ${r.status||'Unspecified'}`;card.append(issue,meta);return card;}));
     }
 
-    function parseCsv(text) {
-      const rows = [];
-      let row = [], cell = '', quoted = false;
-      for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        if (char === '"' && quoted && text[i + 1] === '"') { cell += '"'; i++; }
-        else if (char === '"') quoted = !quoted;
-        else if (char === ',' && !quoted) { row.push(cell); cell = ''; }
-        else if ((char === '\n' || char === '\r') && !quoted) {
-          if (char === '\r' && text[i + 1] === '\n') i++;
-          row.push(cell);
-          if (row.some(value => value.trim())) rows.push(row);
-          row = [];
-          cell = '';
-        } else cell += char;
-      }
-      row.push(cell);
-      if (row.some(value => value.trim())) rows.push(row);
-      return rows;
-    }
-
     function renderHeatmap() {
-      const visible = filteredRecords();
-      heat.setLatLngs(visible.map(record => [record.lat, record.lon, 0.72]));
+      const cutoffDays=timeFilter.value==='all'?null:Number(timeFilter.value);
+      const cutoff=cutoffDays?new Date(Date.now()-cutoffDays*86400000):null;
+      const visible=[],points=[],statusCounts=new Map();
+      for(const record of records){
+        if(issueFilter.value!=='all'&&record.issue!==issueFilter.value)continue;
+        if(categoryFilter.value!=='all'&&record.category!==categoryFilter.value)continue;
+        if(locationFilter.value!=='all'&&record.location!==locationFilter.value)continue;
+        if(statusFilter.value!=='all'&&record.status!==statusFilter.value)continue;
+        if(cutoff&&(!record.date||record.date<cutoff))continue;
+        visible.push(record);points.push([record.lat,record.lon,0.72]);
+        const status=record.status||'Unspecified';statusCounts.set(status,(statusCounts.get(status)||0)+1);
+      }
+      heat.setLatLngs(points);
       document.querySelector('#request-count').textContent = visible.length.toLocaleString();
-      document.querySelector('#status-count').textContent = new Set(visible.map(record => record.status || 'Unspecified')).size.toLocaleString();
+      document.querySelector('#status-count').textContent = statusCounts.size.toLocaleString();
       document.querySelector('#summary-label').textContent = records.length ? 'Filtered records' : 'Waiting for data';
       document.querySelector('#map-count').textContent = visible.length ? visible.length.toLocaleString() + ' requests' : 'No data loaded';
       if (!records.length) {
         document.querySelector('#status-summary').textContent = 'Choose a CSV to start';
       } else {
-        const counts = new Map();
-        visible.forEach(record => counts.set(record.status || 'Unspecified', (counts.get(record.status || 'Unspecified') || 0) + 1));
-        document.querySelector('#status-summary').replaceChildren(...Array.from(counts, ([status, count]) => {
+        document.querySelector('#status-summary').replaceChildren(...Array.from(statusCounts, ([status, count]) => {
           const chip = document.createElement('span');
           chip.className = 'status-chip';
           chip.textContent = status + ' · ' + count.toLocaleString();
@@ -339,6 +390,9 @@
       renderTrend(visible);
       renderReports(visible);
     }
+
+    let renderPending=false;
+    function scheduleRender(){if(renderPending)return;renderPending=true;requestAnimationFrame(()=>{renderPending=false;renderHeatmap();});}
 
     function clearData() {
       records = [];
@@ -364,51 +418,42 @@
       map.setView([20, 0], 2);
     }
 
-    fileInput.addEventListener('change', async event => {
+    fileInput.addEventListener('change', event => {
       const file = event.target.files && event.target.files[0];
       if (!file) return;
       showError('');
-      try {
-        const rows = parseCsv(await file.text());
-        if (rows.length < 2) throw new Error('This CSV has no data rows.');
-        const headers = rows.shift().map(value => value.trim().toLowerCase().replace(/^\ufeff/, ''));
-        const latIndex = headers.findIndex(value => ['latitude', 'lat', 'y'].includes(value));
-        const lonIndex = headers.findIndex(value => ['longitude', 'lon', 'lng', 'long', 'x'].includes(value));
-        const statusIndex = firstIndex(headers,['status','incident_status','request_status']);
-        const issueIndex = firstIndex(headers,['issue','issue_type','problem','name','service_request_type']);
-        const categoryIndex = firstIndex(headers,['category','group_name','service_group']);
-        const dateIndex = firstIndex(headers,['reported','reported_date','incident_date','created_at','date','request_date']);
-        const locationIndex = firstIndex(headers,['location','area','neighbourhood','neighborhood','postcode','electoral_area','incident_address','address']);
-        if (latIndex < 0 || lonIndex < 0) throw new Error('Add coordinate columns named lat/lon or latitude/longitude.');
-        const parsed = [];
-        rows.forEach(row => {
-          const lat = Number(row[latIndex]);
-          const lon = Number(row[lonIndex]);
-          if (Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
-            const date=dateIndex>=0?parseDate(row[dateIndex]):null;
-            parsed.push({ lat, lon, status: statusIndex >= 0 ? (row[statusIndex] || '').trim() : '', issue:issueIndex>=0?(row[issueIndex]||'').trim():'', category:categoryIndex>=0?(row[categoryIndex]||'').trim():'', location:locationIndex>=0?(row[locationIndex]||'').trim():'', date });
-          }
-        });
-        if (!parsed.length) throw new Error('No rows with valid coordinates were found.');
-        records = parsed;
-        fillSelect(issueFilter,'All issues',uniqueValues('issue'));
-        fillSelect(categoryFilter,'All categories',uniqueValues('category'));
-        fillSelect(locationFilter,'All locations',uniqueValues('location'));
-        fillSelect(statusFilter,'All statuses',uniqueValues('status'));
+      if (file.size > 50 * 1024 * 1024) { showError('This file is over 50 MB. Please use a smaller CSV for a smoother experience.'); return; }
+      if (csvWorkerUrl) URL.revokeObjectURL(csvWorkerUrl);
+      csvWorkerUrl = URL.createObjectURL(new Blob([csvWorkerSource], { type: 'text/javascript' }));
+      const worker = new Worker(csvWorkerUrl);
+      fileInput.disabled = true;
+      fileName.textContent = 'Reading CSV…';
+      const finish = () => { worker.terminate(); fileInput.disabled = false; if (csvWorkerUrl) { URL.revokeObjectURL(csvWorkerUrl); csvWorkerUrl = ''; } };
+      worker.onerror = () => { finish(); fileName.textContent = file.name; showError('We could not read this CSV. Check the file and try again.'); };
+      worker.onmessage = event => {
+        finish();
+        if (event.data.error) { fileName.textContent = file.name; showError(event.data.error); return; }
+        records = event.data.records;
+        const choices={issue:new Set(),category:new Set(),location:new Set(),status:new Set()};
+        for(const record of records){if(record.issue)choices.issue.add(record.issue);if(record.category)choices.category.add(record.category);if(record.location)choices.location.add(record.location);if(record.status)choices.status.add(record.status);}
+        const sorted=key=>Array.from(choices[key]).sort((a,b)=>a.localeCompare(b));
+        fillSelect(issueFilter,'All issues',sorted('issue'));
+        fillSelect(categoryFilter,'All categories',sorted('category'));
+        fillSelect(locationFilter,'All locations',sorted('location'));
+        fillSelect(statusFilter,'All statuses',sorted('status'));
         timeFilter.disabled = !records.some(record=>record.date);
         radius.disabled = false;
         clearButton.disabled = false;
         fileName.textContent = file.name + ' · ' + records.length.toLocaleString() + ' mapped';
         document.querySelector('#summary-label').textContent = 'All requests';
         renderHeatmap();
-        if (parsed.length > 1) map.fitBounds(L.latLngBounds(parsed.map(record => [record.lat, record.lon])).pad(0.12), { maxZoom: 14 });
-        else map.setView([parsed[0].lat, parsed[0].lon], 14);
-      } catch (error) {
-        showError(error && error.message ? error.message : 'We could not read this CSV. Check the file and try again.');
-      }
+        if (records.length > 1) { const bounds=L.latLngBounds([]); for(const record of records)bounds.extend([record.lat,record.lon]); map.fitBounds(bounds.pad(0.12),{maxZoom:14}); }
+        else map.setView([records[0].lat, records[0].lon], 14);
+      };
+      worker.postMessage(file);
     });
 
-    [statusFilter,issueFilter,categoryFilter,timeFilter,locationFilter].forEach(select=>select.addEventListener('change',renderHeatmap));
+    [statusFilter,issueFilter,categoryFilter,timeFilter,locationFilter].forEach(select=>select.addEventListener('change',scheduleRender));
     radius.addEventListener('input', event => {
       const value = Number(event.target.value);
       document.querySelector('#radius-value').textContent = value + ' px';
