@@ -1,6 +1,6 @@
 # Dublin Neighbourhood Signals
 
-A single-page map for exploring Dublin service-request density on OpenStreetMap. The map shows heat only; individual complaint markers are not displayed.
+An OpenStreetMap heatmap for exploring Dublin service requests. The app shows heat only, with matching report summaries and a monthly trend chart.
 
 ## Run
 
@@ -8,10 +8,14 @@ Open `index.html` in a browser with an internet connection. Leaflet and OpenStre
 
 ## Load a CSV
 
-Use the **Choose a CSV file** control in the app. Required columns:
+Use **Choose a CSV file**. Coordinates are required as `lat`/`lon` or `latitude`/`longitude`. Optional fields power filters and report details:
 
-- `lat` and `lon`, or `latitude` and `longitude`
+- Issue: `issue`, `issue_type`, `problem`, or `NAME`
+- Category: `category` or `GROUP_NAME`
+- Report date: `reported`, `date`, or `INCIDENT_DATE`
+- Location: `location`, `area`, `neighbourhood`, `postcode`, or `INCIDENT_ADDRESS`
+- Status: `STATUS`, `incident_status`, or `request_status`
 
-An optional `STATUS` column (also accepts `incident_status` or `request_status`) enables the status filter. The heat radius is adjustable. The selected file is read in the browser; only coordinates and status are used. Other columns are ignored, and no complaint records are included in this repository.
+Issue, category, time, location and status filters update the heatmap, report list and trend together. The selected file is read in the browser; only these mapped fields are used. Names and incident IDs are ignored, and no complaint records are included in this repository. Recent-period filters use today as the reference date; use **All dates** to explore older sample records.
 
 Map data © OpenStreetMap contributors, [ODbL](https://www.openstreetmap.org/copyright).
