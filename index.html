@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#f3f6f4" id="theme-color">
   <meta name="description" content="Explore community service request patterns on an interactive OpenStreetMap heatmap.">
   <title>Service Requests | Neighbourhood Signals</title>
+  <link rel="icon" type="image/png" href="city-heatmap-icon.png">
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="preconnect" href="https://tile.openstreetmap.org">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -49,7 +50,8 @@
     .theme-toggle:hover { border-color:var(--green); }
     .theme-toggle:focus-visible { outline:3px solid rgba(23,102,83,.25); outline-offset:2px; }
     .brand { display:flex; align-items:center; gap:12px; min-width:0; }
-    .brand-mark { width:38px; height:38px; display:grid; place-items:center; border-radius:12px; background:var(--green); color:white; font-size:20px; box-shadow:0 5px 14px rgba(23,102,83,.2); }
+    .brand-mark { width:38px; height:38px; display:grid; place-items:center; flex:0 0 38px; border-radius:12px; overflow:hidden; background:#fff; box-shadow:0 5px 14px rgba(23,102,83,.16); }
+    .brand-mark img { display:block; width:100%; height:100%; object-fit:cover; }
     .brand-title { margin:0; font-size:15px; line-height:1.25; letter-spacing:-.02em; font-weight:760; }
     .brand-subtitle { margin:2px 0 0; color:var(--muted); font-size:11px; }
     .privacy-pill { display:flex; align-items:center; gap:7px; padding:7px 10px; border:1px solid #dce9df; border-radius:99px; background:#f7fbf7; color:#3e6255; font-size:11px; font-weight:650; white-space:nowrap; }
@@ -141,6 +143,10 @@
     .map-key-title small { color:var(--muted); font-size:9px; font-weight:500; }
     .leaflet-control-attribution { font-size:9px !important; }
     .leaflet-control-zoom a { color:var(--green-dark) !important; }
+    .leaflet-control-layers { border:1px solid var(--line) !important; border-radius:11px !important; background:var(--paper) !important; color:var(--ink) !important; box-shadow:0 5px 20px rgba(24,47,37,.1) !important; }
+    .leaflet-control-layers-toggle { width:36px !important; height:36px !important; background-color:var(--paper) !important; }
+    .leaflet-control-layers-expanded { padding:9px 11px !important; font:11px/1.8 ui-sans-serif,system-ui,sans-serif !important; }
+    .leaflet-control-layers-separator { border-top-color:var(--line) !important; }
     @media (max-width: 1100px) and (min-width: 701px) { .shell { grid-template-columns:320px minmax(0,1fr); } aside { padding-left:19px; padding-right:19px; } main { overflow:auto; } .workspace-grid { height:auto; min-height:100%; grid-template-columns:1fr; grid-template-rows:minmax(500px,65vh) auto; } }
     @media (max-width: 900px) { aside { padding-left:19px; padding-right:19px; } }
     @media (max-width: 700px) {
@@ -167,7 +173,7 @@
   <div class="shell">
     <header>
       <div class="brand">
-        <div class="brand-mark" aria-hidden="true">⌖</div>
+        <div class="brand-mark" aria-hidden="true"><img src="city-heatmap-icon.png" alt=""></div>
         <div><p class="brand-title">Neighbourhood Signals</p><p class="brand-subtitle">Community service request heatmap</p></div>
       </div>
       <div class="header-actions"><button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="false"><span aria-hidden="true">◐</span><span id="theme-label">Dark mode</span></button></div>
@@ -245,7 +251,7 @@
   <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
   <script>
     const map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    const openStreetMap = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
     }).addTo(map);
@@ -257,6 +263,11 @@
       maxZoom: 16,
       gradient: { 0.22: '#56b789', 0.48: '#f5cc57', 0.74: '#ea794e', 1: '#b9364a' }
     }).addTo(map);
+    L.control.layers(
+      { 'OpenStreetMap': openStreetMap },
+      { 'Request heatmap': heat },
+      { position: 'topright', collapsed: true, sortLayers: false }
+    ).addTo(map);
 
     let records = [];
     const fileInput = document.querySelector('#csv-file');
