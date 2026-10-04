@@ -1,20 +1,17 @@
 # Dublin Neighbourhood Signals
 
-A small web map for exploring Dublin City service request complaints. The app uses OpenStreetMap tiles and Leaflet, and accepts a CSV file containing coordinates and optional issue categories and dates.
+A single-page map for exploring Dublin service-request density on OpenStreetMap. The map shows heat only; individual complaint markers are not displayed.
 
 ## Run
 
-Open `index.html` in a browser with an internet connection. Leaflet and the OpenStreetMap base map load from their public services.
+Open `index.html` in a browser with an internet connection. Leaflet and OpenStreetMap tiles load from their public services.
 
-## Import complaint data
+## Load a CSV
 
-Use the CSV upload control. Required columns:
+Use the **Choose a CSV file** control in the app. Required columns:
 
-- `latitude`
-- `longitude`
+- `lat` and `lon`, or `latitude` and `longitude`
 
-Optional columns: `category` (or `issue_type`, `type`, `service_type`) and `date` (or `created_date`, `created`, `timestamp`).
-
-The app plots uploaded records in the browser. No complaint data is included in this repository.
+An optional `STATUS` column (also accepts `incident_status` or `request_status`) enables the status filter. The heat radius is adjustable. The selected file is read in the browser; only coordinates and status are used. Other columns are ignored, and no complaint records are included in this repository.
 
 Map data © OpenStreetMap contributors, [ODbL](https://www.openstreetmap.org/copyright).
